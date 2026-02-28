@@ -19,10 +19,9 @@ jobs:
 
     - name: Get Versions
       run: |
-        VERSION=$(curl -s https://api.github.com/repos/jdecked/twemoji/releases/latest | grep tag_name | cut -d '"' -f 4)
-        VERSION=${VERSION:1}
+        VERSION="14.0.4"
         echo "VERSION=$VERSION" >> $GITHUB_ENV
-        PREVIOUS_VERSION=$(git describe --tags --abbrev=0)
+        PREVIOUS_VERSION="14.0.3"
         echo "PREVIOUS_VERSION=$PREVIOUS_VERSION" >> $GITHUB_ENV
 
     - name: Clone Repositories
@@ -31,9 +30,9 @@ jobs:
         cd twitter-twemoji-fonts
         git checkout 78a8615f22996e173b6489b004210f6302cfa456
         cd ..
-        git clone https://github.com/jdecked/twemoji.git
+        git clone https://github.com/twitter/twemoji.git
         cd twemoji
-        git checkout v${{ env.VERSION }}
+        git checkout gh-pages
         cd ..
         git clone https://github.com/googlefonts/noto-emoji.git
         cd noto-emoji
@@ -51,7 +50,7 @@ jobs:
         cd noto-emoji
         mv NotoColorEmoji.tmpl.ttx.tmpl Twemoji.tmpl.ttx.tmpl
         sed -i 's/Noto Color Emoji/Twemoji/; s/NotoColorEmoji/Twemoji/; s/Copyright .* Google Inc\./Twitter, Inc and other contributors./; s/ Version .*/ '$VERSION'/; s/.*is a trademark.*//; s/Google, Inc\./Twitter, Inc and other contributors/; s,http://www.google.com/get/noto/,https://github.com/jdecked/twemoji/,; s/.*is licensed under.*/      Creative Commons Attribution 4.0 International/; s,http://scripts.sil.org/OFL,http://creativecommons.org/licenses/by/4.0/,' Twemoji.tmpl.ttx.tmpl
-        cd ../twemoji/assets/72x72/
+        cd ../twemoji/v/14.0.4/72x72/
         for png in *.png; do
           mv $png emoji_u${png//-/_}
         done
@@ -61,30 +60,15 @@ jobs:
         cd noto-emoji
         sudo ln -s $(which add_vs_cmap) $(which add_vs_cmap).py
         make EMOJI=Twemoji EMOJI_SRC_DIR=../twemoji/assets/72x72 FLAGS= BODY_DIMENSIONS=76x72
-        mv Twemoji.ttf ../Twemoji-${{ env.VERSION }}.ttf
-
-    - name: Bump PKGBUILD and SRCINFO
-      run: |
-        sed -i "s/${{ env.PREVIOUS_VERSION }}/${{ env.VERSION }}/g" AUR/PKGBUILD
-        sed -i "s/sha256sums=('[^']*'/sha256sums=('$(sha256sum Twemoji-${{ env.VERSION }}.ttf | awk '{print $1}')'/g" AUR/PKGBUILD
-        sed -i "s/${{ env.PREVIOUS_VERSION }}/${{ env.VERSION }}/g" AUR/.SRCINFO
-        sed -i "/sha256sums/ {/SKIP/! {/$(sha256sum AUR/75-twemoji.conf | awk '{print $1}')/! s/\(sha256sums = \).*/\1$(sha256sum Twemoji-${{ env.VERSION }}.ttf | awk '{print $1}')/}}" AUR/.SRCINFO
-
-    - name: Commit PKGBUILD and SRCINFO
-      uses: EndBug/add-and-commit@v9
-      with:
-        add: 'AUR/PKGBUILD AUR/.SRCINFO'
-        author_name: 'github-actions[bot]'
-        author_email: 'github-actions[bot]@users.noreply.github.com'
-        message: 'Bump to ${{ env.VERSION }}'
+        mv Twemoji.ttf ../Twemoji-new.ttf
 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ./Twemoji-${{ env.VERSION }}.ttf
-        asset_name: Twemoji-${{ env.VERSION }}.ttf
-        tag: ${{ env.VERSION }}
+        file: ./Twemoji-new.ttf
+        asset_name: Twemoji-new.ttf
+        tag: 14.0.4
         overwrite: true
-        release_name: Twemoji ${{ env.VERSION }}
+        release_name: Twemoji 14.0.4
       
